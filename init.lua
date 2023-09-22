@@ -76,6 +76,7 @@ require('lazy').setup({
 
   -- NOTE: This is where your plugins related to LSP can be installed.
   --  The configuration is done below. Search for lspconfig to find it below.
+
   {
     -- LSP Configuration & Plugins
     'neovim/nvim-lspconfig',
@@ -142,14 +143,7 @@ require('lazy').setup({
     },
   },
 
-  {
-    -- Theme inspired by Atom
-    'navarasu/onedark.nvim',
-    priority = 1000,
-    config = function()
-      vim.cmd.colorscheme 'onedark'
-    end,
-  },
+  { "catppuccin/nvim", name = "catppuccin", priority = 1000, opts = {transparent_background = true} },
 
   {
     -- Set lualine as statusline
@@ -209,6 +203,13 @@ require('lazy').setup({
     build = ':TSUpdate',
   },
 
+  {
+    "LazyVim/LazyVim",
+    opts = {
+      colorscheme = "catppuccin"
+    }
+  }
+
   -- NOTE: Next Step on Your Neovim Journey: Add/Configure additional "plugins" for kickstart
   --       These are some example plugins that I've included in the kickstart repository.
   --       Uncomment any of the lines below to enable them.
@@ -230,6 +231,8 @@ require('lazy').setup({
 
 -- Set highlight on search
 vim.o.hlsearch = false
+
+vim.o.relativenumber = true
 
 -- Make line numbers default
 vim.wo.number = true
@@ -328,7 +331,7 @@ require('nvim-treesitter.configs').setup {
   ensure_installed = { 'c', 'cpp', 'go', 'lua', 'python', 'rust', 'tsx', 'javascript', 'typescript', 'vimdoc', 'vim' },
 
   -- Autoinstall languages that are not installed. Defaults to false (but you can change for yourself!)
-  auto_install = false,
+  auto_install = true,
 
   highlight = { enable = true },
   indent = { enable = true },
@@ -449,10 +452,10 @@ end
 local servers = {
   -- clangd = {},
   -- gopls = {},
-  -- pyright = {},
   -- rust_analyzer = {},
-  -- tsserver = {},
-  -- html = { filetypes = { 'html', 'twig', 'hbs'} },
+  pyright = {},
+  tsserver = {},
+  html = { filetypes = { 'html' } },
 
   lua_ls = {
     Lua = {
