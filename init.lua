@@ -1,44 +1,3 @@
---[[
-
-=====================================================================
-==================== READ THIS BEFORE CONTINUING ====================
-=====================================================================
-
-Kickstart.nvim is *not* a distribution.
-
-Kickstart.nvim is a template for your own configuration.
-  The goal is that you can read every line of code, top-to-bottom, understand
-  what your configuration is doing, and modify it to suit your needs.
-
-  Once you've done that, you should start exploring, configuring and tinkering to
-  explore Neovim!
-
-  If you don't know anything about Lua, I recommend taking some time to read through
-  a guide. One possible example:
-  - https://learnxinyminutes.com/docs/lua/
-
-
-  And then you can explore or search through `:help lua-guide`
-  - https://neovim.io/doc/user/lua-guide.html
-
-
-Kickstart Guide:
-
-I have left several `:help X` comments throughout the init.lua
-You should run that command and read that help section for more information.
-
-In addition, I have some `NOTE:` items throughout the file.
-These are for you, the reader to help understand what is happening. Feel free to delete
-them once you know what you're doing, but they should serve as a guide for when you
-are first encountering a few different constructs in your nvim config.
-
-I hope you enjoy your Neovim journey,
-- TJ
-
-P.S. You can delete this when you're done too. It's your config now :)
---]]
--- Set <space> as the leader key
--- See `:help mapleader`
 --  NOTE: Must happen before plugins are required (otherwise wrong leader will be used)
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
@@ -94,6 +53,12 @@ require('lazy').setup({
     },
   },
 
+  { 'jose-elias-alvarez/null-ls.nvim' },
+
+  { 'MunifTanjim/prettier.nvim' },
+
+  { 'm4xshen/autoclose.nvim' },
+
   {
     -- Autocompletion
     'hrsh7th/nvim-cmp',
@@ -145,6 +110,8 @@ require('lazy').setup({
 
   { "catppuccin/nvim", name = "catppuccin", priority = 1000, opts = {transparent_background = true} },
 
+  { 'lervag/vimtex', name = 'vimtex' },
+
   {
     -- Set lualine as statusline
     'nvim-lualine/lualine.nvim',
@@ -194,11 +161,14 @@ require('lazy').setup({
     },
   },
 
+  { 'ThePrimeagen/harpoon' },
+
   {
     -- Highlight, edit, and navigate code
     'nvim-treesitter/nvim-treesitter',
     dependencies = {
       'nvim-treesitter/nvim-treesitter-textobjects',
+      'nvim-treesitter/nvim-treesitter-context',
     },
     build = ':TSUpdate',
   },
@@ -208,7 +178,9 @@ require('lazy').setup({
     opts = {
       colorscheme = "catppuccin"
     }
-  }
+  },
+
+  { 'akinsho/bufferline.nvim', version = "*", dependencies = 'nvim-tree/nvim-web-devicons' }
 
   -- NOTE: Next Step on Your Neovim Journey: Add/Configure additional "plugins" for kickstart
   --       These are some example plugins that I've included in the kickstart repository.
@@ -277,6 +249,15 @@ vim.keymap.set({ 'n', 'v' }, '<Space>', '<Nop>', { silent = true })
 -- Remap for dealing with word wrap
 vim.keymap.set('n', 'k', "v:count == 0 ? 'gk' : 'k'", { expr = true, silent = true })
 vim.keymap.set('n', 'j', "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true })
+
+vim.keymap.set('n', '<C-d>', '<C-d>zz', { desc = 'Center on scroll' })
+vim.keymap.set('n', '<C-u>', '<C-u>zz', { desc = 'Center on scroll' })
+
+-- Remap to auto close things
+-- vim.keymap.set('i', '"', '""<left>', { desc = 'Autoclose "' })
+-- vim.keymap.set('i', '(', '()<left>', { desc = 'Autoclose "' })
+-- vim.keymap.set('i', '{', '{}<left>', { desc = 'Autoclose "' })
+-- vim.keymap.set('i', '[', '[]<left>', { desc = 'Autoclose "' })
 
 -- [[ Highlight on yank ]]
 -- See `:help vim.highlight.on_yank()`
@@ -396,6 +377,11 @@ vim.keymap.set('n', ']d', vim.diagnostic.goto_next, { desc = 'Go to next diagnos
 vim.keymap.set('n', '<leader>e', vim.diagnostic.open_float, { desc = 'Open floating diagnostic message' })
 vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostics list' })
 
+vim.keymap.set('n', '<leader>hp', require('harpoon.ui').toggle_quick_menu, { desc='Toggle [H]ar[p]oon Quick Menu' })
+vim.keymap.set('n', '<leader>ha', require('harpoon.mark').add_file, { desc = '[H]arpoon [A]dd' })
+
+vim.keymap.set('n', '<leader>q', ':bp<bar>sp<bar>bn<bar>bd<CR>', { desc = '[Q]uit buffer' })
+
 -- [[ Configure LSP ]]
 --  This function gets run when an LSP connects to a particular buffer.
 local on_attach = function(_, bufnr)
@@ -453,8 +439,10 @@ local servers = {
   -- clangd = {},
   -- gopls = {},
   -- rust_analyzer = {},
+  texlab = {},
   pyright = {},
   tsserver = {},
+  gopls = {},
   html = { filetypes = { 'html' } },
 
   lua_ls = {
@@ -537,6 +525,71 @@ cmp.setup {
     { name = 'luasnip' },
   },
 }
+
+
+-- Setup null_ls. Required for prettier.
+local null_ls = require("null-ls")
+
+local group = vim.api.nvim_create_augroup("lsp_format_on_save", { clear = false })
+local event = "BufWritePre" -- or "BufWritePost"
+local async = event == "BufWritePost"
+
+null_ls.setup({
+  on_attach = function(client, bufnr)
+    if client.supports_method("textDocument/formatting") then
+      vim.keymap.set("n", "<Leader>fm", function()
+        vim.lsp.buf.format({ bufnr = vim.api.nvim_get_current_buf() })
+      end, { buffer = bufnr, desc = "[F]or[m]at on save" })
+
+      -- format on save
+      vim.api.nvim_clear_autocmds({ buffer = bufnr, group = group })
+      vim.api.nvim_create_autocmd(event, {
+        buffer = bufnr,
+        group = group,
+        callback = function()
+          vim.lsp.buf.format({ bufnr = bufnr, async = async })
+        end,
+        desc = "[lsp] format on save",
+      })
+    end
+
+    if client.supports_method("textDocument/rangeFormatting") then
+      vim.keymap.set("x", "<Leader>fm", function()
+        vim.lsp.buf.format({ bufnr = vim.api.nvim_get_current_buf() })
+      end, { buffer = bufnr, desc = "[F]or[m]at on save" })
+    end
+  end,
+})
+
+-- Setup prettier
+local prettier = require("prettier")
+
+prettier.setup({
+  bin = 'prettier',
+  filetypes = {
+    "css",
+    "graphql",
+    "html",
+    "javascript",
+    "javascriptreact",
+    "json",
+    "less",
+    "markdown",
+    "scss",
+    "typescript",
+    "typescriptreact",
+    "yaml",
+    "go",
+  },
+})
+
+-- Setup bufferline
+vim.opt.termguicolors = true
+require("bufferline").setup()
+
+-- Setup autoclose 
+require("autoclose").setup()
+
 
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
