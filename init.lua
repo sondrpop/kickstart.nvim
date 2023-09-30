@@ -34,10 +34,6 @@ require('lazy').setup({
     },
   },
 
-  { 'jose-elias-alvarez/null-ls.nvim' },
-  { 'MunifTanjim/prettier.nvim' },
-  { 'm4xshen/autoclose.nvim' },
-
   {
     -- Autocompletion
     'hrsh7th/nvim-cmp',
@@ -89,7 +85,6 @@ require('lazy').setup({
   },
 
   { "catppuccin/nvim", name = "catppuccin", priority = 1000, opts = {transparent_background = true} },
-  { 'lervag/vimtex', name = 'vimtex' },
 
   {
     -- Set lualine as statusline
@@ -154,8 +149,6 @@ require('lazy').setup({
       colorscheme = "catppuccin"
     }
   },
-
-  { 'akinsho/bufferline.nvim', version = "*", dependencies = 'nvim-tree/nvim-web-devicons' },
 
   { import = 'custom.plugins' },
 
@@ -486,72 +479,6 @@ cmp.setup {
     { name = 'luasnip' },
   },
 }
-
-
--- Setup null_ls. Required for prettier.
-local null_ls = require("null-ls")
-
-local group = vim.api.nvim_create_augroup("lsp_format_on_save", { clear = false })
-local event = "BufWritePre" -- or "BufWritePost"
-local async = event == "BufWritePost"
-
-null_ls.setup({
-  on_attach = function(client, bufnr)
-    if client.supports_method("textDocument/formatting") then
-      vim.keymap.set("n", "<Leader>fm", function()
-        vim.lsp.buf.format({ bufnr = vim.api.nvim_get_current_buf() })
-      end, { buffer = bufnr, desc = "[F]or[m]at on save" })
-
-      -- format on save
-      vim.api.nvim_clear_autocmds({ buffer = bufnr, group = group })
-      vim.api.nvim_create_autocmd(event, {
-        buffer = bufnr,
-        group = group,
-        callback = function()
-          vim.lsp.buf.format({ bufnr = bufnr, async = async })
-        end,
-        desc = "[lsp] format on save",
-      })
-    end
-
-    if client.supports_method("textDocument/rangeFormatting") then
-      vim.keymap.set("x", "<Leader>fm", function()
-        vim.lsp.buf.format({ bufnr = vim.api.nvim_get_current_buf() })
-      end, { buffer = bufnr, desc = "[F]or[m]at on save" })
-    end
-  end,
-})
-
--- Setup prettier
-local prettier = require("prettier")
-
-prettier.setup({
-  bin = 'prettier',
-  filetypes = {
-    "css",
-    "graphql",
-    "html",
-    "javascript",
-    "javascriptreact",
-    "json",
-    "less",
-    "markdown",
-    "scss",
-    "typescript",
-    "typescriptreact",
-    "yaml",
-    "go",
-  },
-})
-
--- Setup bufferline
-vim.opt.termguicolors = true
-require("bufferline").setup()
-
--- Setup autoclose 
-require("autoclose").setup({
-
-})
 
 
 -- The line beneath this is called `modeline`. See `:help modeline`
